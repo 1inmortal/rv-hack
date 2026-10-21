@@ -1,0 +1,20 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          pip install -r requirements.txt
+          pip install --no-deps RCAEval==1.8.1
+      - name: Download one small suite
+        run: python scripts/download_data.py --suites re3ob
+      - name: Unit + integration tests
+        run: pytest -q
+      - name: Benchmark smoke run (RE3-OB)
+        run: python scripts/run_benchmark.py --suite RE3-OB --out results/ci_re3ob.json

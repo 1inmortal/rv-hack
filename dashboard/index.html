@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChronoTrace · Outage War Room</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 6v7l5 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>ChronoTrace</span>
+  </div>
+  <div class="badge-core" title="Rankings are computed by deterministic statistics only. The language model is called afterwards, on the finished evidence, and cannot change the ranking.">
+    DETERMINISTIC CORE · NO LLM IN DIAGNOSIS
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="diagnose" role="tab">Diagnose</button>
+    <button class="tab" data-tab="benchmark" role="tab">Benchmark</button>
+    <button class="tab" data-tab="how" role="tab">How it works</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============== DIAGNOSE ============== -->
+  <section id="tab-diagnose" class="tabpane active">
+    <aside class="sidebar">
+      <div class="side-block">
+        <label class="lbl" for="ds">Suite</label>
+        <select id="ds"></select>
+        <input id="search" type="search" placeholder="Filter cases…" autocomplete="off">
+      </div>
+      <div class="side-block">
+        <div class="lbl">Showcase</div>
+        <ul id="showcase" class="caselist small"></ul>
+      </div>
+      <div class="side-block grow">
+        <div class="lbl">Cases <span id="count" class="muted"></span></div>
+        <ul id="cases" class="caselist"></ul>
+      </div>
+    </aside>
+
+    <div class="content" id="content">
+      <div id="empty" class="empty">
+        <h2>Pick an outage</h2>
+        <p>Every case is a real failure captured from Online Boutique, Sock Shop or Train Ticket in the RCAEval benchmark.
+          ChronoTrace ranks the services from metrics, logs and traces, then explains the result.</p>
+      </div>
+
+      <div id="incident" hidden>
+        <div class="incident-head">
+          <div>
+            <div class="eyebrow" id="inc-system"></div>
+            <h1 id="inc-title"></h1>
+          </div>
+          <div class="head-actions">
+            <label class="toggle"><input type="checkbox" id="reveal"> Show ground truth</label>
+            <button id="rerun" class="btn ghost">Re-run</button>
+          </div>
+        </div>
+
+        <div id="loading" class="loading" hidden><div class="spinner"></div><span>Running deterministic analysis…</span></div>
+
+        <div id="result" hidden>
+          <div class="pillars">
+            <div class="pillar where">
+              <div class="p-lbl">Where it broke</div>
+              <div class="p-main" id="p-where"></div>
+              <div class="p-sub" id="p-where-sub"></div>
+            </div>
+            <div class="pillar what">
+              <div class="p-lbl">What broke</div>
+              <div class="p-main" id="p-what"></div>
+              <div class="p-sub" id="p-what-sub"></div>
+            </div>
+            <div class="pillar why">
+              <div class="p-lbl">Why (propagation)</div>
+              <div class="p-main chain" id="p-why"></div>
+              <div class="p-sub" id="p-why-sub"></div>
+            </div>
+            <div class="pillar next">
+              <div class="p-lbl">What next</div>
+              <ol class="cmds" id="p-next"></ol>
+            </div>
+          </div>
+
+          <div id="gt-banner" class="gt-banner" hidden></div>
+
+          <div class="grid2">
+            <div class="card">
+              <div class="card-h"><h3>Service call graph</h3><span class="muted" id="graph-note"></span></div>
+              <div id="graph" class="graph"></div>
+              <div class="legend">
+                <span><i class="dot root"></i>root cause</span>
+                <span><i class="dot victim"></i>affected</span>
+                <span><i class="dot normal"></i>normal</span>
+                <span><i class="line shifted"></i>slower call edge</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-h"><h3>Ranking</h3><span class="muted">fused score · per-modality evidence</span></div>
+              <table class="ranks" id="ranks"></table>
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="card">
+              <div class="card-h"><h3>Modality gate</h3><span class="muted">weight = base × decisiveness in this incident</span></div>
+              <div id="gate"></div>
+              <div class="card-h mt"><h3>ChronoTrace vs BARO</h3><span class="muted">official RCAEval BARO on the same window</span></div>
+              <div id="versus" class="versus"></div>
+            </div>
+            <div class="card">
+              <div class="card-h"><h3>Evidence</h3>
+                <div class="seg" id="ev-seg">
+                  <button class="active" data-ev="metrics">Metric</button>
+                  <button data-ev="traces">Trace p90</button>
+                  <button data-ev="logs">Log</button>
+                </div>
+              </div>
+              <div id="chart" class="chart"></div>
+              <div id="chart-legend" class="chart-legend"></div>
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="card">
+              <div class="card-h"><h3>Explanation layer</h3><span class="muted">reads the sealed evidence only</span></div>
+              <div class="explain-actions">
+                <button id="explain" class="btn">Generate runbook</button>
+                <span id="explain-status" class="muted"></span>
+              </div>
+              <div id="explain-out"></div>
+            </div>
+            <div class="card">
+              <div class="card-h"><h3>Reproducibility receipt</h3></div>
+              <dl class="receipt" id="receipt"></dl>
+              <details class="mt"><summary>Schema hygiene applied</summary><pre id="hygiene" class="pre small"></pre></details>
+              <details><summary>Raw evidence bundle (JSON)</summary><pre id="raw" class="pre small"></pre></details>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== BENCHMARK ============== -->
+  <section id="tab-benchmark" class="tabpane">
+    <div class="content wide">
+      <div class="bench-head">
+        <div>
+          <h1>RCAEval benchmark</h1>
+          <p class="muted" id="bench-proto"></p>
+        </div>
+        <div class="seg" id="metric-seg">
+          <button class="active" data-m="AC@1">AC@1</button>
+          <button data-m="AC@3">AC@3</button>
+          <button data-m="Avg@5">Avg@5</button>
+          <button data-m="Lift@5">Lift@5</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-h"><h3 id="bars-title">Top-1 accuracy by suite</h3><span class="muted">ChronoTrace vs official baselines</span></div><div id="bars" class="bars"></div></div>
+      <div class="card"><div class="card-h"><h3>Full results</h3><span class="muted">service level, RCAEval Evaluator</span></div><div id="bench-tables"></div></div>
+      <div class="grid2">
+        <div class="card"><div class="card-h"><h3>By fault type</h3><span class="muted">all suites pooled</span></div><div id="by-fault"></div></div>
+        <div class="card"><div class="card-h"><h3>Run notes</h3></div><div id="bench-notes" class="notes"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== HOW ============== -->
+  <section id="tab-how" class="tabpane">
+    <div class="content wide how">
+      <h1>How ChronoTrace works</h1>
+      <div class="flow">
+        <div class="stage"><b>1 · Load &amp; clean</b><span>RCAEval window (5 min before / after). Drop duplicate time columns, mesh artefacts and IP host columns; fold datastores into their owner (carts-db → carts, ts-auth-mongo → ts-auth-service).</span></div>
+        <div class="arrow">→</div>
+        <div class="stage"><b>2a · Metrics</b><span>Robust z vs healthy median/IQR, 3-point median smoothing, upper-half sustained drift × KS shift × <em>novelty</em>: share of faulty points above the highest level the series already reached while healthy.</span></div>
+        <div class="stage"><b>2b · Logs</b><span>Vectorised templating with PII masking. Local error bursts boosted when novel or carrying a stack frame; "call to X failed" errors discounted (they blame the callee). New-template bursts net of normal churn.</span></div>
+        <div class="stage"><b>2c · Traces</b><span>Server exclusive time (own work, children subtracted). Network gap per call edge; a service is blamed in proportion to how many <em>and</em> what share of its edges slowed.</span></div>
+        <div class="arrow">→</div>
+        <div class="stage"><b>3 · Gate &amp; fuse</b><span>Each modality normalised, then weighted by its decisiveness (top-1 vs top-2 margin) in this incident. Complete traces count double. No per-dataset weights.</span></div>
+        <div class="arrow">→</div>
+        <div class="stage sealed"><b>4 · Evidence bundle</b><span>Ranking, what/where/why, rule-based next steps, input and evidence SHA-256.</span></div>
+      </div>
+      <div class="firewall">DETERMINISM FIREWALL — nothing below can change anything above</div>
+      <div class="flow">
+        <div class="stage llm"><b>5 · Explanation layer</b><span>Gemma 4 (Gemini API) or a local Ollama model writes a schema-locked JSON runbook from the bundle only. Every service, metric and command is checked against the evidence; any mismatch falls back to a deterministic template.</span></div>
+      </div>
+      <div class="grid2 mt">
+        <div class="card"><h3>Why not just ask an LLM?</h3><p>Raw telemetry for one incident is hundreds of thousands of log lines and spans. Benchmarks show LLM agents fed raw telemetry rank poorly, and their answers cannot be reproduced. Here the model only verbalises a finished, hashed result.</p></div>
+        <div class="card"><h3>Why not BARO?</h3><p>BARO scores a metric by its single largest post-fault z-score. Bursty series (e.g. Redis disk flushes) and zero-IQR counters win that contest in most RE2/RE3 cases. The novelty filter and the trace/log scorers fix exactly those failure modes — see the ablations on the Benchmark tab.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

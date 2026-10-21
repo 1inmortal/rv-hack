@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chronotrace"
+version = "1.0.0"
+description = "Deterministic multi-source root cause analysis for microservice outages, evaluated on RCAEval"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.1",
+  "pyarrow>=14",
+  "scipy>=1.10",
+  "scikit-learn>=1.3",
+  "networkx>=3",
+  "requests>=2.31",
+  "tqdm>=4",
+  "pydantic>=2.5",
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "huggingface_hub>=0.23",
+]
+
+[project.optional-dependencies]
+gemma = ["google-genai>=1.0"]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[tool.setuptools]
+packages = ["chronotrace", "api"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::UserWarning", "ignore::RuntimeWarning"]

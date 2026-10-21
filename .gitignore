@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+data/
+results/audit.jsonl
+results/ci_*.json
+results_run.log
+.pytest_cache/
+.env
+*.pkl
