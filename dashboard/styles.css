@@ -72,6 +72,7 @@ select, input[type=search] {
   display: flex; justify-content: space-between; gap: 6px; color: #c9d4e0;
 }
 .caselist li:hover { background: var(--panel-2); }
+.caselist li:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .caselist li.active { background: #1c2b40; color: #fff; }
 .caselist li .tag { color: var(--muted); font-size: 11px; }
 .caselist.small li { font-family: inherit; font-size: 12px; flex-direction: column; gap: 1px; }
