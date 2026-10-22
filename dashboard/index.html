@@ -15,16 +15,16 @@
   <div class="badge-core" title="Rankings are computed by deterministic statistics only. The language model is called afterwards, on the finished evidence, and cannot change the ranking.">
     DETERMINISTIC CORE · NO LLM IN DIAGNOSIS
   </div>
-  <nav class="tabs" role="tablist">
-    <button class="tab active" data-tab="diagnose" role="tab">Diagnose</button>
-    <button class="tab" data-tab="benchmark" role="tab">Benchmark</button>
-    <button class="tab" data-tab="how" role="tab">How it works</button>
+  <nav class="tabs" role="tablist" aria-label="Dashboard sections">
+    <button class="tab active" id="tab-button-diagnose" data-tab="diagnose" role="tab" aria-controls="tab-diagnose" aria-selected="true" tabindex="0">Diagnose</button>
+    <button class="tab" id="tab-button-benchmark" data-tab="benchmark" role="tab" aria-controls="tab-benchmark" aria-selected="false" tabindex="-1">Benchmark</button>
+    <button class="tab" id="tab-button-how" data-tab="how" role="tab" aria-controls="tab-how" aria-selected="false" tabindex="-1">How it works</button>
   </nav>
 </header>
 
 <main>
   <!-- ============== DIAGNOSE ============== -->
-  <section id="tab-diagnose" class="tabpane active">
+  <section id="tab-diagnose" class="tabpane active" role="tabpanel" aria-labelledby="tab-button-diagnose" tabindex="0">
     <aside class="sidebar">
       <div class="side-block">
         <label class="lbl" for="ds">Suite</label>
@@ -33,11 +33,11 @@
       </div>
       <div class="side-block">
         <div class="lbl">Showcase</div>
-        <ul id="showcase" class="caselist small"></ul>
+        <ul id="showcase" class="caselist small" role="listbox" aria-label="Showcase cases"></ul>
       </div>
       <div class="side-block grow">
         <div class="lbl">Cases <span id="count" class="muted"></span></div>
-        <ul id="cases" class="caselist"></ul>
+        <ul id="cases" class="caselist" role="listbox" aria-label="Cases"></ul>
       </div>
     </aside>
 
@@ -146,7 +146,7 @@
   </section>
 
   <!-- ============== BENCHMARK ============== -->
-  <section id="tab-benchmark" class="tabpane">
+  <section id="tab-benchmark" class="tabpane" role="tabpanel" aria-labelledby="tab-button-benchmark" tabindex="0">
     <div class="content wide">
       <div class="bench-head">
         <div>
@@ -170,7 +170,7 @@
   </section>
 
   <!-- ============== HOW ============== -->
-  <section id="tab-how" class="tabpane">
+  <section id="tab-how" class="tabpane" role="tabpanel" aria-labelledby="tab-button-how" tabindex="0">
     <div class="content wide how">
       <h1>How ChronoTrace works</h1>
       <div class="flow">
