@@ -63,6 +63,7 @@ async function loadCases() {
     .map((s) => `<li role="option" aria-selected="false" tabindex="-1" data-case="${esc(s.case)}"><b>${esc(s.case)}</b><span>${esc(s.why)}</span></li>`)
     .join("");
   wireCaseListKeyboard($("#showcase"));
+  wireCaseListKeyboard($("#cases"));
   $("#showcase li").forEach((li) => li.addEventListener("click", () => selectCase(li.dataset.case)));
   renderCaseList();
   const fromHash = new URLSearchParams(location.hash.slice(1)).get("case");
@@ -77,7 +78,6 @@ function renderCaseList() {
   $("#cases").innerHTML = rows
     .map((c) => `<li role="option" aria-selected="false" tabindex="-1" data-case="${esc(c.case)}"><span>${esc(c.case.replace(/^re\d\w\w_/, ""))}</span><span class="tag">${esc(c.dataset)}</span></li>`)
     .join("");
-  wireCaseListKeyboard($("#cases"));
   $("#cases li").forEach((li) => li.addEventListener("click", () => selectCase(li.dataset.case)));
   markActive();
 }
@@ -249,7 +249,7 @@ function renderGraph(b) {
     if (r.role !== "NORMAL") return "var(--victim)";
     return "var(--normal)";
   };
-  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Service call graph for ${d.root_cause}: ${services.length} services, ${edges.length} calls, ${shifted.size} slowed edges.`)}"><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4b5563"/></marker><marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f0506e"/></marker></defs>`;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Service call graph for ${d.root_cause}: ${services.length} services, ${edges.filter((edge) => services.includes(edge.caller) && services.includes(edge.callee) && edge.caller !== edge.callee).length} calls, ${shifted.size} slowed edges.`)}"><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4b5563"/></marker><marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f0506e"/></marker></defs>`;
   const maxCalls = Math.max(1, ...edges.map((e) => e.calls));
   edges.forEach((e) => {
     const a = pos[e.caller], c = pos[e.callee];
