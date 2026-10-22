@@ -16,15 +16,38 @@ async function api(path, opts) {
 }
 
 /* ---------------- tabs ---------------- */
-function initTabs() {
-  $$(".tab").forEach((b) =>
-    b.addEventListener("click", () => {
-      $$(".tab").forEach((x) => x.classList.toggle("active", x === b));
-      $$(".tabpane").forEach((p) => p.classList.toggle("active", p.id === `tab-${b.dataset.tab}`));
-      if (b.dataset.tab === "benchmark") loadBenchmark();
-    })
-  );
+function activateTab(button) {
+  $$(".tab").forEach((tab) => {
+    const selected = tab === button;
+    tab.classList.toggle("active", selected);
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+  });
+  $$(".tabpane").forEach((panel) => {
+    const selected = panel.id === button.getAttribute("aria-controls");
+    panel.classList.toggle("active", selected);
+  });
+  if (button.dataset.tab === "benchmark") loadBenchmark();
 }
+
+function initTabs() {
+  const tabs = $$(".tab");
+  tabs.forEach((button, index) => {
+    button.addEventListener("click", () => activateTab(button));
+    button.addEventListener("keydown", (event) => {
+      let next = index;
+      if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
+      else if (event.key === "ArrowLeft") next = (index - 1 + tabs.length) % tabs.length;
+      else if (event.key === "Home") next = 0;
+      else if (event.key === "End") next = tabs.length - 1;
+      else return;
+      event.preventDefault();
+      tabs[next].focus();
+      activateTab(tabs[next]);
+    });
+  });
+}
+
 
 /* ---------------- case list ---------------- */
 async function loadCases() {
@@ -37,9 +60,10 @@ async function loadCases() {
   ds.addEventListener("change", renderCaseList);
   $("#search").addEventListener("input", renderCaseList);
   $("#showcase").innerHTML = state.showcase
-    .map((s) => `<li data-case="${esc(s.case)}"><b>${esc(s.case)}</b><span>${esc(s.why)}</span></li>`)
+    .map((s) => `<li role="option" aria-selected="false" tabindex="-1" data-case="${esc(s.case)}"><b>${esc(s.case)}</b><span>${esc(s.why)}</span></li>`)
     .join("");
-  $$("#showcase li").forEach((li) => li.addEventListener("click", () => selectCase(li.dataset.case)));
+  wireCaseListKeyboard($("#showcase"));
+  $("#showcase li").forEach((li) => li.addEventListener("click", () => selectCase(li.dataset.case)));
   renderCaseList();
   const fromHash = new URLSearchParams(location.hash.slice(1)).get("case");
   if (fromHash) selectCase(fromHash);
@@ -51,15 +75,46 @@ function renderCaseList() {
   const rows = state.cases.filter((c) => (!ds || c.dataset === ds) && (!q || c.case.toLowerCase().includes(q)));
   $("#count").textContent = `(${rows.length})`;
   $("#cases").innerHTML = rows
-    .map((c) => `<li data-case="${esc(c.case)}"><span>${esc(c.case.replace(/^re\d\w\w_/, ""))}</span><span class="tag">${esc(c.dataset)}</span></li>`)
+    .map((c) => `<li role="option" aria-selected="false" tabindex="-1" data-case="${esc(c.case)}"><span>${esc(c.case.replace(/^re\d\w\w_/, ""))}</span><span class="tag">${esc(c.dataset)}</span></li>`)
     .join("");
-  $$("#cases li").forEach((li) => li.addEventListener("click", () => selectCase(li.dataset.case)));
+  wireCaseListKeyboard($("#cases"));
+  $("#cases li").forEach((li) => li.addEventListener("click", () => selectCase(li.dataset.case)));
   markActive();
+}
+
+function wireCaseListKeyboard(list) {
+  list.addEventListener("keydown", (event) => {
+    const options = $("li[role=option]", list);
+    const currentOption = event.target.closest('li[role="option"]');
+    const current = options.indexOf(currentOption);
+    if (current < 0) return;
+    let next = current;
+    if (event.key === "ArrowDown") next = Math.min(options.length - 1, current + 1);
+    else if (event.key === "ArrowUp") next = Math.max(0, current - 1);
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = options.length - 1;
+    else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      selectCase(options[current].dataset.case);
+      return;
+    } else return;
+    event.preventDefault();
+    options[next]?.focus();
+  });
 }
 
 function markActive() {
   const id = state.bundle?.case_id || state.pending;
-  $$(".caselist li").forEach((li) => li.classList.toggle("active", li.dataset.case === id));
+  $(".caselist").forEach((list) => {
+    const options = $('li[role="option"]', list);
+    const selected = options.find((option) => option.dataset.case === id) || null;
+    options.forEach((option, index) => {
+      const isSelected = option === selected;
+      option.classList.toggle("active", isSelected);
+      option.setAttribute("aria-selected", String(isSelected));
+      option.tabIndex = isSelected || (!selected && index === 0) ? 0 : -1;
+    });
+  });
 }
 
 /* ---------------- diagnose ---------------- */
@@ -194,7 +249,7 @@ function renderGraph(b) {
     if (r.role !== "NORMAL") return "var(--victim)";
     return "var(--normal)";
   };
-  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="service call graph"><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4b5563"/></marker><marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f0506e"/></marker></defs>`;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Service call graph for ${d.root_cause}: ${services.length} services, ${edges.length} calls, ${shifted.size} slowed edges.`)}"><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4b5563"/></marker><marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f0506e"/></marker></defs>`;
   const maxCalls = Math.max(1, ...edges.map((e) => e.calls));
   edges.forEach((e) => {
     const a = pos[e.caller], c = pos[e.callee];
@@ -297,7 +352,7 @@ async function loadSeries(b, req) {
 }
 
 function miniChart(points, it, color, title, W = 640, H = 78) {
-  if (!points || !points.length) return `<text x="8" y="20">${esc(title)}: no data</text>`;
+  if (!points || !points.length) return `<g role="img" aria-label="${esc(`${title}: no data available.`)}"><text x="8" y="20">${esc(title)}: no data</text></g>`;
   const xs = points.map((p) => p[0]), ys = points.map((p) => p[1] ?? 0);
   const x0 = Math.min(...xs), x1 = Math.max(...xs);
   let y0 = Math.min(...ys), y1 = Math.max(...ys);
@@ -307,12 +362,13 @@ function miniChart(points, it, color, title, W = 640, H = 78) {
   const Y = (y) => T + (1 - (y - y0) / (y1 - y0)) * (H - T - B);
   const d = points.map((p, i) => `${i ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1] ?? 0).toFixed(1)}`).join("");
   const ix = X(it);
-  return `<text x="${L}" y="11" style="fill:#c9d4e0">${esc(title)}</text>
+  const chartLabel = `${title}. ${points.length} samples from ${shortNum(x0)} to ${shortNum(x1)}; values range from ${shortNum(Math.min(...ys))} to ${shortNum(Math.max(...ys))}; fault injected at ${shortNum(it)}.`;
+  return `<g role="img" aria-label="${esc(chartLabel)}"><text x="${L}" y="11" style="fill:#c9d4e0">${esc(title)}</text>
     <line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" stroke="#2a3340"/>
     <text x="${L - 4}" y="${T + 4}" text-anchor="end">${esc(shortNum(y1))}</text><text x="${L - 4}" y="${H - B}" text-anchor="end">${esc(shortNum(y0))}</text>
     <rect x="${ix}" y="${T}" width="${W - R - ix}" height="${H - T - B}" fill="#f0506e" fill-opacity="0.06"/>
     <line x1="${ix}" x2="${ix}" y1="${T - 4}" y2="${H - B}" stroke="#f0506e" stroke-dasharray="3 3"/>
-    <path d="${d}" fill="none" stroke="${color}" stroke-width="1.4"/>`;
+    <path d="${d}" fill="none" stroke="${color}" stroke-width="1.4"/></g>`;
 }
 
 function shortNum(v) {
@@ -428,6 +484,8 @@ function renderBench() {
   const dsList = Object.keys(t).filter((d) => d !== "ALL");
   const order = ["ALL", ...dsList];
   const maxV = m === "Lift@5" ? Math.max(...order.flatMap((d) => ["chronotrace", "baro", "nsigma"].map((k) => t[d][k]?.[m] || 0))) : 1;
+  $("#bars").setAttribute("role", "img");
+  $("#bars").setAttribute("aria-label", `${m} benchmark comparison across ${order.length} suites, including ChronoTrace, BARO and N-Sigma; values are shown for each suite.`);
   $("#bars").innerHTML =
     `<div class="bars-legend"><span><i style="background:var(--accent)"></i>ChronoTrace</span><span><i style="background:#8b98a8"></i>BARO</span><span><i style="background:#4b5563"></i>N-Sigma</span></div>` +
     order
